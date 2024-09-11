@@ -23,7 +23,9 @@
 
 # %%
 import pandas as pd
-from ydata_profiling import ProfileReport
+from sklearn.preprocessing import MultiLabelBinarizer
+import plotly.express as px
+import string
 
 # %% [markdown]
 # # Import Data
@@ -44,12 +46,46 @@ from ydata_profiling import ProfileReport
 # %%
 df = pd.read_csv('./data/titanic_raw_data.csv')
 
+# %% [markdown]
+# # Feature Engineering
+
+# %% [markdown]
+# - n_cabin: number of cabins that the passenger is part of
+# - n_cabin_deck: number of decks that the passenger is part of
+# - family_size: number of parents + siblings + spouses + children + self
+# - age_bin: category of age
+# - title: associated with honorifics
+# - ticket_group_size
+
 # %%
-profile = ProfileReport(df, title="Titanic Data Profiling Report")
+df.columns = df.columns.str.lower()
+df['embarked'] = df['embarked'].replace({'C': 'Cherbourg', 'Q':'Queenstown', 'S':'Southampton'})
+
+# %%
+df['cabin_cleaned'] = df['cabin'].map(lambda x: x.split(' ') if pd.notna(x) else [])
+df['n_cabin'] = df['cabin_cleaned'].map(len)
+df['cabin_deck'] = df['cabin_cleaned'].map(lambda x: list(set([i[0] for i in x])))
+df['n_cabin_deck'] = df['cabin_deck'].map(len)
+df['family_size'] = df['sibsp'] + df['parch'] + 1
+df['age_bin'] = pd.cut(df['age'], bins=[0, 12, 18, 35, 60, 80], labels=['Child', 'Teenager', 'Adult', 'Middle-Aged', 'Senior']).astype(str)
+df['title'] = df['name'].str.lower().str.extract(r'([a-z]+)\.', expand=False)
+df['ticket_group_size'] = df.groupby('ticket')['ticket'].transform('count')
+df['title_frequency'] = df.groupby('title')['title'].transform('count')
+df['fare_per_person'] = df['fare'] / df['ticket_group_size']
+df['name_length'] = df['name'].str.replace(f'[{string.punctuation}]', '', regex=True).str.split().apply(len)
 
 
 # %%
-profile.to_notebook_iframe()
+mlb = MultiLabelBinarizer()
 
+df = pd.concat([
+    df,
+    pd.DataFrame(mlb.fit_transform(df['cabin_deck']), columns=['cabin_deck_'+i for i in mlb.classes_], index=df.index),
+], axis = 1)
+
+# %%
+df.drop(columns = ['cabin','cabin_cleaned','cabin_deck','ticket','name'], inplace = True)
+
+# %%
 
 # %%
