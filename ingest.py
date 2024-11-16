@@ -63,9 +63,11 @@ df['embarked'] = df['embarked'].replace({'C': 'Cherbourg', 'Q':'Queenstown', 'S'
 
 # %%
 df['cabin_cleaned'] = df['cabin'].map(lambda x: x.split(' ') if pd.notna(x) else [])
+df['cabin_deck'] = df['cabin'].map(lambda x: x[0] if pd.notna(x) else x)
+
 df['n_cabin'] = df['cabin_cleaned'].map(len)
-df['cabin_deck'] = df['cabin_cleaned'].map(lambda x: list(set([i[0] for i in x])))
-df['n_cabin_deck'] = df['cabin_deck'].map(len)
+df['n_cabin_deck'] = df['cabin_cleaned'].map(lambda x: len(set([i[0] for i in x])))
+
 df['family_size'] = df['sibsp'] + df['parch'] + 1
 df['age_bin'] = pd.cut(df['age'], bins=[0, 12, 18, 35, 60, 80], labels=['Child', 'Teenager', 'Adult', 'Middle-Aged', 'Senior']).astype(str)
 df['title'] = df['name'].str.lower().str.extract(r'([a-z]+)\.', expand=False)
@@ -76,16 +78,4 @@ df['name_length'] = df['name'].str.replace(f'[{string.punctuation}]', '', regex=
 
 
 # %%
-mlb = MultiLabelBinarizer()
-
-df = pd.concat([
-    df,
-    pd.DataFrame(mlb.fit_transform(df['cabin_deck']), columns=['cabin_deck_'+i for i in mlb.classes_], index=df.index),
-], axis = 1)
-
-# %%
-df.drop(columns = ['cabin','cabin_cleaned','cabin_deck','ticket','name'], inplace = True)
-
-# %%
-
-# %%
+df.drop(columns = ['cabin','cabin_cleaned','ticket','name'], inplace = True)

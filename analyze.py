@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import ipywidgets as widgets
 import plotly.express as px
 import plotly.io as pio
+import seaborn as sns
 # -
 
 # # High Level Overview
@@ -76,24 +77,55 @@ def plot_shap(idx):
     )
 
     plt.figure()
-
-    plt.title(f'Passenger ID: {df_imputation.loc[idx,"passengerid"]} \nAnomaly Score: {round(anomaly_scores[idx], 2)}')
-
-    shap.waterfall_plot(shap_exp)
     
-# Create an interactive dropdown for selecting an instance based on sorted anomaly scores
+    plt.title(f'Passenger ID: {df_imputation.loc[idx,"passengerid"]} \nAnomaly Score: {round(anomaly_scores[idx], 2)}')
+    shap.waterfall_plot(shap_exp, max_display = 6)
+
+
 dropdown = widgets.Dropdown(
-    options=[(f'Passenger {df_imputation.loc[idx, "passengerid"]} (Anomaly Score: {round(anomaly_scores[idx], 2)})', idx) for idx in sorted_scores[:5]],
+    options=[
+        (f'Passenger {df_imputation.loc[idx, "passengerid"]} (Anomaly Score: {round(anomaly_scores[idx], 2)})', idx) for idx in sorted_scores[:10]
+    ],
     description='Passenger:',
     disabled=False,
 )
 
-# Update the plot when the dropdown selection changes
 widgets.interact(plot_shap, idx=dropdown)
+plt.show()
 # -
 
+# # Details of Anomalies
+
+loc = sorted_scores[0]
+df_imputation.iloc[loc]
+
+np.argsort(shap_values[loc])[shap_values[loc] < 0]
 
 
 
+df_imputation.iloc[loc].index[np.argsort(shap_values[loc])[:5]]
+
+shap_values[sorted_scores[0]]
+
+np.argsort(shap_values[sorted_scores[0]])[-6:]
+
+# +
+import matplotlib.pyplot as plt
+
+# Example: Compare distribution of 'age' with anomaly's 'age' value
+anomaly_idx = 0  # Index of your anomaly
+anomalous_age = df_imputation.loc[anomaly_idx, 'age']
+
+# Plot distribution of 'age' across population
+sns.kdeplot(df_imputation['age'], fill=True, label='Population Age Distribution')
+
+# Mark the anomaly's 'age' value
+plt.axvline(anomalous_age, color='red', linestyle='--', label='Anomaly Age')
+
+plt.legend()
+plt.title('Age Distribution vs Anomalous Age')
+plt.show()
+
+# -
 
 
